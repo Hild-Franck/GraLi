@@ -1,0 +1,23 @@
+{
+  "name": "grali",
+  "version": "0.0.1",
+  "description": "A WebGL graphic library",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 0",
+    "start": "lite-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hild-Franck/GraLi.git"
+  },
+  "author": "Hild Franck",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Hild-Franck/GraLi/issues"
+  },
+  "homepage": "https://github.com/Hild-Franck/GraLi#readme",
+  "dependencies": {
+    "lite-server": "^2.2.2"
+  }
+}
