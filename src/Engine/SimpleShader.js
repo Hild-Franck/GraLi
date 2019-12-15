@@ -1,54 +1,67 @@
-function SimpleShader(vertexShaderID, fragmentShaderID) {
-	this.mCompiledShader = null
-	this.mShaderVertexPositionAttribute = null
+import { gl } from './Core'
+import VertexBuffer from './VertexBuffer'
 
-	const gl = gEngine.Core.getGL()
-
-	const vertexShader = this.loadAndCompileShader(vertexShaderID, gl.VERTEX_SHADER)
-	const fragmentShader = this.loadAndCompileShader(fragmentShaderID, gl.FRAGMNET_SHADER)
-
-	this.mCompiledShader = gl.createProgram()
-	gl.attachShader(this.mCompiledShader, vertexShader)
-	gl.attachShader(this.mCompiledShader, fragmentShader)
-	gl.linkProgram(this.mCompiledShader)
-
-	if (!gl.getProgramParameter(this.mCompiledShader, gl.LINK_STATUS)) {
-		alert("Error linking shader")
-		return null
+const openShaderFile = path => {
+	const xmlReq = new XMLHttpRequest()
+	xmlReq.open("GET", path, false)
+	try {
+		xmlReq.send()
+		if (xmlReq.responseText == null) throw new Error()
+	} catch (e) {
+		return alert('Failed to load shader: ' + path)
 	}
-
-	this.mShaderVertexPositionAttribute = gl.getAttribLocation(this.mCompiledShader, "aSquareVertexposition")
-	gl.bindBuffer(gl.ARRAY_BUFFER, gEngine.VertexBuffer.getGLVertexRef())
-	gl.vertexAttribPointer(this.mShaderVertexPositionAttribute,
-		3,
-		gl.FLOAT,
-		false,
-		0,
-		0)
+	return xmlReq.responseText
 }
 
-SimpleShader.prototype.loadAndCompileShader = function(id, shaderType) {
-	let shaderText, shaderSource, compiledShader
-	const gl = gEngine.Core.getGL()
-
-	shaderText = document.getElementById(id)
-	shaderSource = shaderText.firstChild.textContent
-
-	compiledShader = gl.createShader(shaderType)
-
+const loadAndCompileShader = gl => (filePath, shaderType) => {
+	const shaderSource = openShaderFile((filePath))
+	const compiledShader = gl.createShader(shaderType)
 	gl.shaderSource(compiledShader, shaderSource)
 	gl.compileShader(compiledShader)
 
 	if (!gl.getShaderParameter(compiledShader, gl.COMPILE_STATUS)) {
-		alert("A shader compiling error occured: " + gl.getShaderInfoLog(compiledShader))
+		alert(
+			'A shader compiling error occured: '
+			+ gl.getShaderInfoLog(compiledShader))
 	}
 	return compiledShader
 }
 
-SimpleShader.prototype.activateShader = function() {
-	const gl = gEngine.Core.getGL()
-	gl.useProgram(this.mCompiledShader)
-	gl.enableVertexAttribArray(this.mShaderVertexPositionAttribute)
+const linkShaders = gl => (vertexShader, fragmentShader) => {
+	const compiledShader = gl.createProgram()
+	gl.attachShader(compiledShader, vertexShader)
+	gl.attachShader(compiledShader, fragmentShader)
+	gl.linkProgram(compiledShader)
+
+	if (!gl.getProgramParameter(compiledShader, gl.LINK_STATUS))
+		return alert("Error linking shader")
+
+	return compiledShader
 }
 
-SimpleShader.prototype.getShader = function() { return this.mCompiledShader }
+const create = (vertexShaderID, fragmentShaderID) => {
+	const vertexShader = loadAndCompileShader(gl)(vertexShaderID, gl.VERTEX_SHADER)
+	const fragmentShader = loadAndCompileShader(gl)(fragmentShaderID, gl.FRAGMENT_SHADER)
+	const compiledShader = linkShaders(gl)(vertexShader, fragmentShader)
+	const shaderVertexPositionAttribute = gl.getAttribLocation(compiledShader, "aSquareVertexPosition")
+	
+	gl.bindBuffer(gl.ARRAY_BUFFER, VertexBuffer.squareVertexBuffer)
+	gl.vertexAttribPointer(shaderVertexPositionAttribute, 3, gl.FLOAT, false, 0, 0)
+	
+	const pixelColorLocation = gl.getUniformLocation(compiledShader, "uPixelColor")
+
+	const activateShader = pixelColor => {
+		gl.useProgram(compiledShader)
+		gl.enableVertexAttribArray(shaderVertexPositionAttribute)
+		gl.uniform4fv(pixelColorLocation, pixelColor)
+	}
+
+	return {
+		compiledShader,
+		shaderVertexPositionAttribute,
+		pixelColorLocation,
+		activateShader
+	}
+}
+
+export default { create }
